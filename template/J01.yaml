@@ -1,0 +1,41 @@
+parameters:
+  maven-settings: './tsmcBuild/settings.xml'
+  maven-pom: 'pom.xml'
+  maven-option: '-Xmx3072m'
+  maven-goals: 'clean install'
+
+
+steps:
+- task: SonarQubePrepare@4
+  displayName: 'Env. Preparation'
+  inputs:
+    SonarQube: 'SonarQube'
+    scannerMode: 'Other'
+- task: Maven@3
+  displayName: 'Build Code'
+  inputs:
+    mavenPomFile: ${{ parameters['maven-pom'] }}
+    options: '--settings '${{ parameters['maven-settings'] }}
+    mavenOptions: ${{ parameters['maven-option'] }}
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.8'
+    jdkArchitectureOption: 'x64'
+    publishJUnitResults: false
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    goals: ${{ parameters['maven-goals'] }}
+- task: Docker@2
+  displayName: 'Build Image'
+  inputs:
+    containerRegistry: 'dockerhub (chlingb)'
+    repository: 'chlingb/wildfly-test'
+    command: 'buildAndPush'
+    Dockerfile: 'dockerfile'
+- task: Maven@3
+  displayName: 'Sonar Scan'
+  inputs:
+    mavenPomFile: 'HelloWorld/pom.xml'
+    goals: 'sonar:sonar'
+    publishJUnitResults: false
+    javaHomeOption: 'JDKVersion'
+    mavenVersionOption: 'Default'
+    mavenAuthenticateFeed: false
